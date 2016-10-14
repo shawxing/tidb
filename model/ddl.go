@@ -150,7 +150,7 @@ func (job *Job) String() string {
 // IsFinished returns whether job is finished or not.
 // If the job state is Done or Cancelled, it is finished.
 func (job *Job) IsFinished() bool {
-	return job.State == JobDone || job.State == JobCancelled
+	return job.State == JobDone || job.State == JobRollbackDone || job.State == JobCancelled
 }
 
 // IsRunning returns whether job is still running or not.
@@ -165,6 +165,10 @@ type JobState byte
 const (
 	JobNone JobState = iota
 	JobRunning
+	// Add unique index encounter the error of duplicated key,
+	// then convert add index to drop index to ensure to delete keys have been added.
+	JobRollback
+	JobRollbackDone
 	JobDone
 	JobCancelled
 )
@@ -174,6 +178,10 @@ func (s JobState) String() string {
 	switch s {
 	case JobRunning:
 		return "running"
+	case JobRollback:
+		return "rollback"
+	case JobRollbackDone:
+		return "rollback done"
 	case JobDone:
 		return "done"
 	case JobCancelled:

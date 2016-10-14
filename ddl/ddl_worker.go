@@ -398,7 +398,9 @@ func (d *ddl) runDDLJob(t *meta.Meta, job *model.Job) {
 		return
 	}
 
-	job.State = model.JobRunning
+	if job.State != model.JobRollback {
+		job.State = model.JobRunning
+	}
 
 	var err error
 	switch job.Type {
@@ -434,7 +436,7 @@ func (d *ddl) runDDLJob(t *meta.Meta, job *model.Job) {
 	if err != nil {
 		// if job is not cancelled, we should log this error.
 		if job.State != model.JobCancelled {
-			log.Errorf("run ddl job err %v", errors.ErrorStack(err))
+			log.Errorf("[ddl] run ddl job err %v", errors.ErrorStack(err))
 		}
 
 		job.Error = toTError(err)
