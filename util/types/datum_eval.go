@@ -585,7 +585,7 @@ func ComputeBitXor(a, b Datum) (d Datum, err error) {
 	return d, nil
 }
 
-// ComputeRightShift computes the result of a & b.
+// ComputeLeftShift computes the result of a >>  b.
 func ComputeLeftShift(a, b Datum) (d Datum, err error) {
 	aKind, bKind := a.Kind(), b.Kind()
 	if (aKind == KindInt64 || aKind == KindUint64) && (bKind == KindInt64 || bKind == KindUint64) {
@@ -637,7 +637,7 @@ func ComputeLeftShift(a, b Datum) (d Datum, err error) {
 	return d, nil
 }
 
-// ComputeRightShift computes the result of a & b.
+// ComputeRightShift computes the result of a << b.
 func ComputeRightShift(a, b Datum) (d Datum, err error) {
 	aKind, bKind := a.Kind(), b.Kind()
 	if (aKind == KindInt64 || aKind == KindUint64) && (bKind == KindInt64 || bKind == KindUint64) {

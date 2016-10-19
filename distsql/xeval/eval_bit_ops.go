@@ -44,7 +44,7 @@ func (e *Evaluator) evalBitOps(expr *tipb.Expr) (types.Datum, error) {
 	return ComputeBit(expr.GetTp(), left, right)
 }
 
-// ComputeBit computes the logic operation on two datums.
+// ComputeBit computes the bitwise operation on two datums.
 func ComputeBit(op tipb.ExprType, left, right types.Datum) (types.Datum, error) {
 	var result types.Datum
 	a, err := types.CoerceArithmetic(left)
