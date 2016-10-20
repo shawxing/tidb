@@ -235,6 +235,10 @@ func logicalFuncToPBExpr(client kv.Client, expr *expression.ScalarFunction) *tip
 	case ast.UnaryNot:
 		return notToPBExpr(client, expr)
 	}
+	if !client.SupportRequestType(kv.ReqTypeSelect, int64(tp)) {
+		return nil
+	}
+
 	expr0 := exprToPB(client, expr.Args[0])
 	if expr0 == nil {
 		return nil
@@ -263,6 +267,9 @@ func bitwiseFuncToPBExpr(client kv.Client, expr *expression.ScalarFunction) *tip
 		tp = tipb.ExprType_RighShift
 	case ast.BitNeg:
 		return bitNegToPBExpr(client, expr)
+	}
+	if !client.SupportRequestType(kv.ReqTypeSelect, int64(tp)) {
+		return nil
 	}
 	expr0 := exprToPB(client, expr.Args[0])
 	if expr0 == nil {
