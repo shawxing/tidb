@@ -373,7 +373,7 @@ func ComputeIntDiv(a, b Datum) (d Datum, err error) {
 		}
 	}
 
-	// if any is none integer, use decimal to calculate
+	// if either is not integer, use decimal to calculate
 	x, err := a.ToDecimal()
 	if err != nil {
 		return d, errors.Trace(err)
@@ -396,6 +396,30 @@ func ComputeIntDiv(a, b Datum) (d Datum, err error) {
 	return d, nil
 }
 
+// decimal2RoundUint convert a MyDecimal to a uint64 after rounding.
+func decimal2RoundUint(x *mysql.MyDecimal) (uint64, error) {
+	roundX := new(mysql.MyDecimal)
+	x.Round(roundX, 0)
+	var (
+		uintX uint64
+		err   error
+	)
+	if roundX.IsNegative() {
+		intX, err := roundX.ToInt()
+		if err != nil && err != mysql.ErrTruncated {
+			return 0, errors.Trace(err)
+		}
+		uintX = uint64(intX)
+	} else {
+		uintX, err = roundX.ToUint()
+		if err != nil && err != mysql.ErrTruncated {
+			return 0, errors.Trace(err)
+		}
+	}
+
+	return uintX, nil
+}
+
 // ComputeBitAnd computes the result of a & b.
 func ComputeBitAnd(a, b Datum) (d Datum, err error) {
 	aKind, bKind := a.Kind(), b.Kind()
@@ -403,8 +427,7 @@ func ComputeBitAnd(a, b Datum) (d Datum, err error) {
 		d.SetUint64(a.GetUint64() & b.GetUint64())
 		return
 	}
-
-	// if any is not integer, we round the operands and then use uint64 to calculate.
+	// if either is not integer, we round the operands and then use uint64 to calculate.
 	x, err := a.ToDecimal()
 	if err != nil {
 		return d, errors.Trace(err)
@@ -415,35 +438,15 @@ func ComputeBitAnd(a, b Datum) (d Datum, err error) {
 		return d, errors.Trace(err)
 	}
 
-	roundX, roundY := new(mysql.MyDecimal), new(mysql.MyDecimal)
-	x.Round(roundX, 0)
-	y.Round(roundY, 0)
+	uintX, err := decimal2RoundUint(x)
+	if err != nil {
+		return d, errors.Trace(err)
+	}
+	uintY, err := decimal2RoundUint(y)
+	if err != nil {
+		return d, errors.Trace(err)
+	}
 
-	var uintX, uintY uint64
-	if roundX.IsNegative() {
-		intX, err := roundX.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintX = uint64(intX)
-	} else {
-		uintX, err = roundX.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-	}
-	if roundY.IsNegative() {
-		intY, err := roundY.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintY = uint64(intY)
-	} else {
-		uintY, err = roundY.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-	}
 	d.SetUint64(uintX & uintY)
 	return d, nil
 }
@@ -456,7 +459,7 @@ func ComputeBitOr(a, b Datum) (d Datum, err error) {
 		return
 	}
 
-	// if any is none integer, use decimal to calculate
+	// if either is not integer, use decimal to calculate
 	x, err := a.ToDecimal()
 	if err != nil {
 		return d, errors.Trace(err)
@@ -467,35 +470,15 @@ func ComputeBitOr(a, b Datum) (d Datum, err error) {
 		return d, errors.Trace(err)
 	}
 
-	roundX, roundY := new(mysql.MyDecimal), new(mysql.MyDecimal)
-	x.Round(roundX, 0)
-	y.Round(roundY, 0)
+	uintX, err := decimal2RoundUint(x)
+	if err != nil {
+		return d, errors.Trace(err)
+	}
+	uintY, err := decimal2RoundUint(y)
+	if err != nil {
+		return d, errors.Trace(err)
+	}
 
-	var uintX, uintY uint64
-	if roundX.IsNegative() {
-		intX, err := roundX.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintX = uint64(intX)
-	} else {
-		uintX, err = roundX.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-	}
-	if roundY.IsNegative() {
-		intY, err := roundY.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintY = uint64(intY)
-	} else {
-		uintY, err = roundY.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-	}
 	d.SetUint64(uintX | uintY)
 	return d, nil
 }
@@ -507,28 +490,17 @@ func ComputeBitNeg(a Datum) (d Datum, err error) {
 		d.SetUint64(^a.GetUint64())
 		return
 	}
-	// if any is not integer, we round the operands and then use uint64 to calculate.
+	// if either is not integer, we round the operands and then use uint64 to calculate.
 	x, err := a.ToDecimal()
 	if err != nil {
 		return d, errors.Trace(err)
 	}
 
-	roundX := new(mysql.MyDecimal)
-	x.Round(roundX, 0)
-
-	var uintX uint64
-	if roundX.IsNegative() {
-		intX, err := roundX.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintX = uint64(intX)
-	} else {
-		uintX, err = roundX.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
+	uintX, err := decimal2RoundUint(x)
+	if err != nil {
+		return d, errors.Trace(err)
 	}
+
 	d.SetUint64(^uintX)
 	return d, nil
 }
@@ -541,7 +513,7 @@ func ComputeBitXor(a, b Datum) (d Datum, err error) {
 		return
 	}
 
-	// if any is not integer, we round the operands and then use uint64 to calculate.
+	// if either is not integer, we round the operands and then use uint64 to calculate.
 	x, err := a.ToDecimal()
 	if err != nil {
 		return d, errors.Trace(err)
@@ -552,35 +524,15 @@ func ComputeBitXor(a, b Datum) (d Datum, err error) {
 		return d, errors.Trace(err)
 	}
 
-	roundX, roundY := new(mysql.MyDecimal), new(mysql.MyDecimal)
-	x.Round(roundX, 0)
-	y.Round(roundY, 0)
+	uintX, err := decimal2RoundUint(x)
+	if err != nil {
+		return d, errors.Trace(err)
+	}
+	uintY, err := decimal2RoundUint(y)
+	if err != nil {
+		return d, errors.Trace(err)
+	}
 
-	var uintX, uintY uint64
-	if roundX.IsNegative() {
-		intX, err := roundX.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintX = uint64(intX)
-	} else {
-		uintX, err = roundX.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-	}
-	if roundY.IsNegative() {
-		intY, err := roundY.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintY = uint64(intY)
-	} else {
-		uintY, err = roundY.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-	}
 	d.SetUint64(uintX ^ uintY)
 	return d, nil
 }
@@ -593,7 +545,7 @@ func ComputeLeftShift(a, b Datum) (d Datum, err error) {
 		return
 	}
 
-	// if any is not integer, we round the operands and then use uint64 to calculate.
+	// if either is not integer, we round the operands and then use uint64 to calculate.
 	x, err := a.ToDecimal()
 	if err != nil {
 		return d, errors.Trace(err)
@@ -604,35 +556,15 @@ func ComputeLeftShift(a, b Datum) (d Datum, err error) {
 		return d, errors.Trace(err)
 	}
 
-	roundX, roundY := new(mysql.MyDecimal), new(mysql.MyDecimal)
-	x.Round(roundX, 0)
-	y.Round(roundY, 0)
+	uintX, err := decimal2RoundUint(x)
+	if err != nil {
+		return d, errors.Trace(err)
+	}
+	uintY, err := decimal2RoundUint(y)
+	if err != nil {
+		return d, errors.Trace(err)
+	}
 
-	var uintX, uintY uint64
-	if roundX.IsNegative() {
-		intX, err := roundX.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintX = uint64(intX)
-	} else {
-		uintX, err = roundX.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-	}
-	if roundY.IsNegative() {
-		intY, err := roundY.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintY = uint64(intY)
-	} else {
-		uintY, err = roundY.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-	}
 	d.SetUint64(uintX << uintY)
 	return d, nil
 }
@@ -644,7 +576,7 @@ func ComputeRightShift(a, b Datum) (d Datum, err error) {
 		d.SetUint64(a.GetUint64() >> b.GetUint64())
 		return
 	}
-	// if any is not integer, we round the operands and then use uint64 to calculate.
+	// if either is not integer, we round the operands and then use uint64 to calculate.
 	x, err := a.ToDecimal()
 	if err != nil {
 		return d, errors.Trace(err)
@@ -654,35 +586,16 @@ func ComputeRightShift(a, b Datum) (d Datum, err error) {
 	if err != nil {
 		return d, errors.Trace(err)
 	}
-	roundX, roundY := new(mysql.MyDecimal), new(mysql.MyDecimal)
-	x.Round(roundX, 0)
-	y.Round(roundY, 0)
 
-	var uintX, uintY uint64
-	if roundX.IsNegative() {
-		intX, err := roundX.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintX = uint64(intX)
-	} else {
-		uintX, err = roundX.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
+	uintX, err := decimal2RoundUint(x)
+	if err != nil {
+		return d, errors.Trace(err)
 	}
-	if roundY.IsNegative() {
-		intY, err := roundY.ToInt()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
-		uintY = uint64(intY)
-	} else {
-		uintY, err = roundY.ToUint()
-		if err != nil && err != mysql.ErrTruncated {
-			return d, errors.Trace(err)
-		}
+	uintY, err := decimal2RoundUint(y)
+	if err != nil {
+		return d, errors.Trace(err)
 	}
+
 	d.SetUint64(uintX >> uintY)
 	return d, nil
 }
